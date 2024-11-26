@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Seleccionar un color</title>
-    <p id="descripcion">Selecciona una tribuna para personalizar la experiencia de tu pantalla. ¡Haz clic en tu ubicación preferida y disfruta del espectáculo!</p>
-    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+      <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Oswald', sans-serif;
@@ -111,17 +110,19 @@ font-size: 14px;
 <body>
     <h1 id="titulo">ELEGÍ UN COLOR</h1>
     <div id="opciones">
-        <button class="tribuna-btn rojo" onclick="cambiarTribuna('red')"></button>
-        <button class="tribuna-btn blanco" onclick="cambiarTribuna('white')"></button>
-        <button class="tribuna-btn verde" onclick="cambiarTribuna('green')"></button> <!-- Cambiado a verde -->
-        <button class="tribuna-btn azul" onclick="cambiarTribuna('blue')"></button> <!-- Cambiado a azul -->
+        <button class="tribuna-btn rojo" onclick="cambiarTribuna('red')">ROJO</button>
+        <button class="tribuna-btn blanco" onclick="cambiarTribuna('white')">BLANCO</button>
+        <button class="tribuna-btn verde" onclick="cambiarTribuna('green')">VERDE</button> <!-- Cambiado a verde -->
+        <button class="tribuna-btn azul" onclick="cambiarTribuna('blue')">AZUL</button> <!-- Cambiado a azul -->
     </div>
     <button id="volver" class="volver-btn hidden" onclick="mostrarOpciones()">Volver</button>
     <button id="volver-inicio" class="volverinicio-btn">VOLVER A INICIO</button>
 
     <div id="mensaje-brillo">SUBÍ AL MÁXIMO EL BRILLO DE TU PANTALLA</div>
     <!-- Créditos al estilo de créditos -->
-
+    <div id="creditos">
+        <a href="" target="_blank" style="color: #999; text-decoration: none;"> ®</a>
+    </div>
 
     <script>
         let strobeInterval;
