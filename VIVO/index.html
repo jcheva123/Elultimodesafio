@@ -3,89 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Transmisión Twitch 480x96 con bandas negras</title>
+  <title>Test Twitch Embed (Iframe)</title>
   <style>
-    .main-container {
-      width: 480px;
-      height: 96px;
-      display: flex;
-      background-color: black;
-      position: relative;
-    }
-    .black-bar {
-      width: 16px;
-      height: 96px;
-      background-color: black;
-      z-index: 20;
-    }
-    .video-container {
-      width: 448px;
-      height: 96px;
-      overflow: hidden;
-      position: relative;
-    }
-    .video-container iframe {
-      width: 448px;
-      height: 290px;
-      position: absolute;
-      top: 50%;
-      left: 0;
-      transform: translateY(-108%) scaleY(1.70);
-    }
-    .overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 480px;
-      height: 96px;
-      background-color: red;
-      color: white;
+    body {
+      margin: 0;
+      background-color: #000;
       display: flex;
       justify-content: center;
       align-items: center;
+      height: 100vh;
+      color: #fff;
       font-family: Arial, sans-serif;
-      font-size: 24px;
-      font-weight: bold;
-      z-index: 10;
-      animation: hideOverlay 5s forwards;
     }
-    @keyframes hideOverlay {
-      0% { opacity: 1; }
-      99% { opacity: 1; }
-      100% { opacity: 0; visibility: hidden; }
-    }
-    .fallback-message {
+    .error-message {
       display: none;
-      position: absolute;
-      top: 0;
-      left: 16px;
-      width: 448px;
-      height: 96px;
-      background-color: #333;
-      color: white;
       text-align: center;
-      font-family: Arial, sans-serif;
-      font-size: 16px;
-      line-height: 96px;
-      z-index: 5;
     }
   </style>
 </head>
 <body>
-  <div class="main-container">
-    <div class="black-bar"></div>
-    <div class="video-container">
-      <iframe
-        src="https://player.twitch.tv/?channel=labrujula24&parent=primate.com.ar&autoplay=true&muted=true"
-        frameborder="0"
-        allowfullscreen="true"
-        scrolling="no"
-        onerror="document.querySelector('.fallback-message').style.display='block';"
-      ></iframe>
-      <div class="fallback-message">No se pudo cargar la transmisión. Verifica la conexión o el estado del canal.</div>
-    </div>
-    <div class="black-bar"></div>
-    <div class="overlay">TRANSMISIÓN EN VIVO</div>
-  </div>
+  <iframe
+    src="https://player.twitch.tv/?channel=labrujula24&parent=primate.com.ar&autoplay=true&muted=true"
+    frameborder="0"
+    allowfullscreen="true"
+    scrolling="no"
+    width="620"
+    height="378"
+    onerror="document.getElementById('error').style.display='block';"
+  ></iframe>
+  <div id="error" class="error-message">No se pudo cargar la transmisión. Verifica la conexión o el estado del canal.</div>
 </body>
 </html>
