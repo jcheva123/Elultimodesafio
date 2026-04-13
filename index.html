@@ -9,15 +9,21 @@
       box-sizing: border-box;
     }
 
-    body {
+    html, body {
       margin: 0;
+      padding: 0;
+      min-height: 100%;
       font-family: Arial, sans-serif;
       background: #111;
       color: #fff;
+    }
+
+    body {
       display: flex;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
+      padding: 18px;
     }
 
     .app {
@@ -27,11 +33,11 @@
       text-align: center;
       background: #1b1b1b;
       border-radius: 18px;
-      box-shadow: 0 0 30px rgba(0,0,0,0.35);
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.35);
     }
 
     h1 {
-      margin-top: 0;
+      margin: 0 0 18px;
       font-size: 28px;
     }
 
@@ -42,6 +48,7 @@
       padding: 12px;
       border-radius: 12px;
       background: #2a2a2a;
+      transition: background 0.2s ease;
     }
 
     .mode.run {
@@ -53,16 +60,17 @@
     }
 
     .time {
-      font-size: 72px;
+      font-size: 76px;
       font-weight: bold;
-      margin: 20px 0;
+      margin: 18px 0 10px;
       letter-spacing: 2px;
+      line-height: 1;
     }
 
     .info {
       font-size: 18px;
       color: #ccc;
-      margin-bottom: 14px;
+      margin-bottom: 10px;
     }
 
     .status {
@@ -86,6 +94,7 @@
       font-size: 16px;
       font-weight: bold;
       cursor: pointer;
+      min-width: 110px;
     }
 
     .start {
@@ -104,10 +113,23 @@
     }
 
     .small {
-      margin-top: 20px;
+      margin-top: 18px;
       color: #aaa;
       font-size: 14px;
       line-height: 1.5;
+    }
+
+    .legend {
+      margin-top: 16px;
+      font-size: 13px;
+      color: #bbb;
+      line-height: 1.5;
+    }
+
+    .tap-note {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #888;
     }
   </style>
 </head>
@@ -126,8 +148,16 @@
       <button class="reset" id="resetBtn">Reiniciar</button>
     </div>
 
+    <div class="legend">
+      Aviso suave a los 30 segundos · Aviso fuerte al finalizar el minuto
+    </div>
+
     <div class="small">
-      Consejo para iPhone: poné <strong>Bloqueo automático en Nunca</strong> para que la pantalla no se apague durante el entrenamiento.
+      En iPhone conviene usar Safari y poner <strong>Bloqueo automático en Nunca</strong>.
+    </div>
+
+    <div class="tap-note">
+      Tocá Iniciar una vez para habilitar el audio.
     </div>
   </div>
 
@@ -140,6 +170,8 @@
     let timer = null;
     let intervalCount = 1;
     let wakeLock = null;
+    let audioCtx = null;
+    let halfAlertPlayed = false;
 
     const modeEl = document.getElementById("mode");
     const timeEl = document.getElementById("time");
@@ -173,23 +205,59 @@
       statusEl.textContent = text;
     }
 
-    function playBeep() {
+    async function initAudio() {
       try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
 
-        oscillator.type = "sine";
-        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
-        gainNode.gain.setValueAtTime(0.18, audioCtx.currentTime);
+        if (audioCtx.state === "suspended") {
+          await audioCtx.resume();
+        }
 
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.25);
+        return true;
       } catch (error) {
-        console.error("No se pudo reproducir el beep:", error);
+        console.error("No se pudo iniciar el audio:", error);
+        setStatus("No se pudo activar el audio");
+        return false;
+      }
+    }
+
+    function playTone(frequency, duration, volume, type = "sine", delay = 0) {
+      if (!audioCtx) return;
+
+      const startTime = audioCtx.currentTime + delay;
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(frequency, startTime);
+
+      gainNode.gain.setValueAtTime(0.0001, startTime);
+      gainNode.gain.exponentialRampToValueAtTime(volume, startTime + 0.01);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+
+      oscillator.start(startTime);
+      oscillator.stop(startTime + duration + 0.02);
+    }
+
+    function playHalfAlert() {
+      try {
+        playTone(880, 0.12, 0.08, "sine", 0);
+      } catch (error) {
+        console.error("Error en aviso de 30 segundos:", error);
+      }
+    }
+
+    function playFinalAlert() {
+      try {
+        playTone(880, 0.16, 0.16, "sine", 0);
+        playTone(1180, 0.22, 0.20, "sine", 0.23);
+      } catch (error) {
+        console.error("Error en aviso final:", error);
       }
     }
 
@@ -200,14 +268,16 @@
           setStatus("Pantalla activa durante el entrenamiento");
 
           wakeLock.addEventListener("release", () => {
-            setStatus("La pantalla volvió a modo normal");
+            if (timer) {
+              setStatus("La pantalla volvió a modo normal");
+            }
           });
         } else {
-          setStatus("Tu navegador no soporta mantener la pantalla activa");
+          setStatus("Timer en marcha");
         }
       } catch (error) {
-        setStatus("No se pudo activar el modo de pantalla despierta");
         console.error("Wake Lock error:", error);
+        setStatus("Timer en marcha");
       }
     }
 
@@ -223,15 +293,17 @@
     }
 
     function switchMode() {
-      playBeep();
+      playFinalAlert();
 
       if (currentMode === "run") {
         currentMode = "rest";
         timeLeft = restDuration;
+        halfAlertPlayed = false;
       } else {
         currentMode = "run";
         timeLeft = runDuration;
         intervalCount++;
+        halfAlertPlayed = false;
       }
 
       updateDisplay();
@@ -240,21 +312,22 @@
     async function startTimer() {
       if (timer) return;
 
-      try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === "suspended") {
-          await audioCtx.resume();
-        }
-      } catch (error) {
-        console.error("AudioContext:", error);
-      }
+      const audioReady = await initAudio();
+      if (!audioReady) return;
+
+      // beep muy breve inicial para "despertar" el audio en algunos iPhone
+      playTone(740, 0.05, 0.03, "sine", 0);
 
       await requestWakeLock();
-
       setStatus("Timer en marcha");
 
       timer = setInterval(() => {
         timeLeft--;
+
+        if (timeLeft === 30 && !halfAlertPlayed) {
+          playHalfAlert();
+          halfAlertPlayed = true;
+        }
 
         if (timeLeft <= 0) {
           switchMode();
@@ -279,6 +352,8 @@
       currentMode = "run";
       timeLeft = runDuration;
       intervalCount = 1;
+      halfAlertPlayed = false;
+
       updateDisplay();
       setStatus("Reiniciado");
     }
