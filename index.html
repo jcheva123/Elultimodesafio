@@ -28,7 +28,7 @@
 
     .app {
       width: 100%;
-      max-width: 430px;
+      max-width: 440px;
       padding: 24px;
       text-align: center;
       background: #1b1b1b;
@@ -39,6 +39,37 @@
     h1 {
       margin: 0 0 18px;
       font-size: 28px;
+    }
+
+    .config {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 18px;
+      text-align: left;
+    }
+
+    .config-card {
+      background: #242424;
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .config-card label {
+      display: block;
+      font-size: 13px;
+      color: #bbb;
+      margin-bottom: 6px;
+    }
+
+    .config-card select {
+      width: 100%;
+      border: none;
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 16px;
+      background: #111;
+      color: #fff;
     }
 
     .mode {
@@ -112,17 +143,17 @@
       color: #fff;
     }
 
-    .small {
-      margin-top: 18px;
-      color: #aaa;
-      font-size: 14px;
-      line-height: 1.5;
-    }
-
     .legend {
       margin-top: 16px;
       font-size: 13px;
       color: #bbb;
+      line-height: 1.5;
+    }
+
+    .small {
+      margin-top: 18px;
+      color: #aaa;
+      font-size: 14px;
       line-height: 1.5;
     }
 
@@ -137,6 +168,37 @@
   <div class="app">
     <h1>Timer de Intervalos</h1>
 
+    <div class="config">
+      <div class="config-card">
+        <label for="runSelect">Correr</label>
+        <select id="runSelect">
+          <option value="30">30 segundos</option>
+          <option value="45">45 segundos</option>
+          <option value="60" selected>1 minuto</option>
+          <option value="90">1 min 30 s</option>
+          <option value="120">2 minutos</option>
+          <option value="180">3 minutos</option>
+          <option value="240">4 minutos</option>
+          <option value="300">5 minutos</option>
+        </select>
+      </div>
+
+      <div class="config-card">
+        <label for="restSelect">Descanso</label>
+        <select id="restSelect">
+          <option value="15">15 segundos</option>
+          <option value="30">30 segundos</option>
+          <option value="45">45 segundos</option>
+          <option value="60" selected>1 minuto</option>
+          <option value="90">1 min 30 s</option>
+          <option value="120">2 minutos</option>
+          <option value="180">3 minutos</option>
+          <option value="240">4 minutos</option>
+          <option value="300">5 minutos</option>
+        </select>
+      </div>
+    </div>
+
     <div id="mode" class="mode run">Correr</div>
     <div id="time" class="time">01:00</div>
     <div id="info" class="info">Intervalo 1</div>
@@ -149,7 +211,7 @@
     </div>
 
     <div class="legend">
-      Aviso suave a los 30 segundos · Aviso fuerte al finalizar el minuto
+      Aviso suave a la mitad del bloque · aviso fuerte y vibración al finalizar
     </div>
 
     <div class="small">
@@ -180,6 +242,8 @@
     const startBtn = document.getElementById("startBtn");
     const pauseBtn = document.getElementById("pauseBtn");
     const resetBtn = document.getElementById("resetBtn");
+    const runSelect = document.getElementById("runSelect");
+    const restSelect = document.getElementById("restSelect");
 
     function formatTime(seconds) {
       const min = String(Math.floor(seconds / 60)).padStart(2, "0");
@@ -203,6 +267,11 @@
 
     function setStatus(text) {
       statusEl.textContent = text;
+    }
+
+    function syncConfigFromSelectors() {
+      runDuration = parseInt(runSelect.value, 10);
+      restDuration = parseInt(restSelect.value, 10);
     }
 
     async function initAudio() {
@@ -244,11 +313,17 @@
       oscillator.stop(startTime + duration + 0.02);
     }
 
+    function vibrate(pattern) {
+      if (navigator.vibrate) {
+        navigator.vibrate(pattern);
+      }
+    }
+
     function playHalfAlert() {
       try {
         playTone(880, 0.12, 0.08, "sine", 0);
       } catch (error) {
-        console.error("Error en aviso de 30 segundos:", error);
+        console.error("Error en aviso intermedio:", error);
       }
     }
 
@@ -292,8 +367,13 @@
       }
     }
 
+    function getHalfPoint(totalSeconds) {
+      return Math.floor(totalSeconds / 2);
+    }
+
     function switchMode() {
       playFinalAlert();
+      vibrate([120, 80, 160]);
 
       if (currentMode === "run") {
         currentMode = "rest";
@@ -312,19 +392,26 @@
     async function startTimer() {
       if (timer) return;
 
+      syncConfigFromSelectors();
+
       const audioReady = await initAudio();
       if (!audioReady) return;
 
-      // beep muy breve inicial para "despertar" el audio en algunos iPhone
       playTone(740, 0.05, 0.03, "sine", 0);
 
       await requestWakeLock();
       setStatus("Timer en marcha");
 
+      runSelect.disabled = true;
+      restSelect.disabled = true;
+
       timer = setInterval(() => {
         timeLeft--;
 
-        if (timeLeft === 30 && !halfAlertPlayed) {
+        const activeDuration = currentMode === "run" ? runDuration : restDuration;
+        const halfPoint = getHalfPoint(activeDuration);
+
+        if (halfPoint > 0 && timeLeft === halfPoint && !halfAlertPlayed) {
           playHalfAlert();
           halfAlertPlayed = true;
         }
@@ -342,6 +429,9 @@
       timer = null;
       await releaseWakeLock();
       setStatus("Timer en pausa");
+
+      runSelect.disabled = false;
+      restSelect.disabled = false;
     }
 
     async function resetTimer() {
@@ -349,14 +439,35 @@
       timer = null;
       await releaseWakeLock();
 
+      syncConfigFromSelectors();
+
       currentMode = "run";
       timeLeft = runDuration;
       intervalCount = 1;
       halfAlertPlayed = false;
 
+      runSelect.disabled = false;
+      restSelect.disabled = false;
+
       updateDisplay();
       setStatus("Reiniciado");
     }
+
+    runSelect.addEventListener("change", () => {
+      if (!timer && currentMode === "run") {
+        syncConfigFromSelectors();
+        timeLeft = runDuration;
+        updateDisplay();
+      }
+    });
+
+    restSelect.addEventListener("change", () => {
+      if (!timer && currentMode === "rest") {
+        syncConfigFromSelectors();
+        timeLeft = restDuration;
+        updateDisplay();
+      }
+    });
 
     document.addEventListener("visibilitychange", async () => {
       if (document.visibilityState === "visible" && timer) {
@@ -368,6 +479,7 @@
     pauseBtn.addEventListener("click", pauseTimer);
     resetBtn.addEventListener("click", resetTimer);
 
+    syncConfigFromSelectors();
     updateDisplay();
   </script>
 </body>
