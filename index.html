@@ -211,7 +211,7 @@
     </div>
 
     <div class="legend">
-      Aviso suave a los 30 segundos · aviso fuerte al finalizar
+      Aviso suave a los 30 segundos · aviso fuerte al finalizar · vibración incluida
     </div>
 
     <div class="small">
@@ -277,6 +277,12 @@
       restDuration = parseInt(restSelect.value, 10);
     }
 
+    function vibrate(pattern) {
+      if (navigator.vibrate) {
+        navigator.vibrate(pattern);
+      }
+    }
+
     async function initAudio() {
       try {
         if (!audioCtx) {
@@ -290,7 +296,6 @@
           await audioCtx.resume();
         }
 
-        // tono silencioso muy corto para “desbloquear” el audio en iPhone
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
 
@@ -343,6 +348,8 @@
         volume: 0.22,
         type: "square"
       });
+
+      vibrate(80);
     }
 
     function playFinalAlert() {
@@ -361,12 +368,8 @@
         type: "square",
         delay: 0.18
       });
-    }
 
-    function vibrate(pattern) {
-      if (navigator.vibrate) {
-        navigator.vibrate(pattern);
-      }
+      vibrate([120, 70, 170]);
     }
 
     async function requestWakeLock() {
@@ -402,7 +405,6 @@
 
     function switchMode() {
       playFinalAlert();
-      vibrate([120, 70, 150]);
 
       if (currentMode === "run") {
         currentMode = "rest";
@@ -433,7 +435,6 @@
       restSelect.disabled = true;
 
       timer = setInterval(async () => {
-        // si iPhone/safari suspendió audio, lo reanuda
         if (audioCtx && audioCtx.state !== "running") {
           try {
             await audioCtx.resume();
