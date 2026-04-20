@@ -41,7 +41,8 @@
       font-size: 28px;
     }
 
-    .config {
+    .config,
+    .config-2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
@@ -62,8 +63,7 @@
       margin-bottom: 6px;
     }
 
-    .config-card select,
-    .config-card input {
+    .config-card select {
       width: 100%;
       border: none;
       border-radius: 10px;
@@ -71,14 +71,6 @@
       font-size: 16px;
       background: #111;
       color: #fff;
-    }
-
-    .config-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 18px;
-      text-align: left;
     }
 
     .mode {
@@ -181,6 +173,21 @@
       font-size: 12px;
       color: #888;
     }
+
+    @media (max-width: 480px) {
+      .config,
+      .config-2 {
+        grid-template-columns: 1fr;
+      }
+
+      .time {
+        font-size: 64px;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
@@ -220,13 +227,13 @@
 
     <div class="config-2">
       <div class="config-card">
-        <label for="intervalInput">Intervalo actual</label>
-        <input id="intervalInput" type="number" min="1" value="1" />
+        <label for="intervalSelect">Intervalo actual</label>
+        <select id="intervalSelect"></select>
       </div>
 
       <div class="config-card">
-        <label for="secondsInput">Tiempo restante (seg)</label>
-        <input id="secondsInput" type="number" min="1" value="60" />
+        <label for="secondsSelect">Tiempo restante</label>
+        <select id="secondsSelect"></select>
       </div>
     </div>
 
@@ -282,8 +289,8 @@
     const applyBtn = document.getElementById("applyBtn");
     const runSelect = document.getElementById("runSelect");
     const restSelect = document.getElementById("restSelect");
-    const intervalInput = document.getElementById("intervalInput");
-    const secondsInput = document.getElementById("secondsInput");
+    const intervalSelect = document.getElementById("intervalSelect");
+    const secondsSelect = document.getElementById("secondsSelect");
 
     function formatTime(seconds) {
       const safe = Math.max(0, seconds);
@@ -305,6 +312,35 @@
       return currentMode === "run" ? runDuration : restDuration;
     }
 
+    function populateIntervalSelect() {
+      intervalSelect.innerHTML = "";
+      for (let i = 1; i <= 30; i++) {
+        const option = document.createElement("option");
+        option.value = i;
+        option.textContent = `Intervalo ${i}`;
+        intervalSelect.appendChild(option);
+      }
+    }
+
+    function populateSecondsSelect(maxSeconds, selectedValue) {
+      secondsSelect.innerHTML = "";
+
+      for (let i = maxSeconds; i >= 1; i--) {
+        const option = document.createElement("option");
+        option.value = i;
+        option.textContent = formatTime(i);
+        secondsSelect.appendChild(option);
+      }
+
+      const safeValue = Math.min(Math.max(1, selectedValue), maxSeconds);
+      secondsSelect.value = String(safeValue);
+    }
+
+    function refreshManualSelectors() {
+      intervalSelect.value = String(intervalCount);
+      populateSecondsSelect(getCurrentModeDuration(), timeLeft);
+    }
+
     function updateDisplay() {
       timeEl.textContent = formatTime(timeLeft);
 
@@ -317,8 +353,7 @@
       }
 
       infoEl.textContent = `Intervalo ${intervalCount}`;
-      intervalInput.value = intervalCount;
-      secondsInput.value = timeLeft;
+      refreshManualSelectors();
     }
 
     function vibrate(pattern) {
@@ -479,13 +514,10 @@
     function applyManualState() {
       syncConfigFromSelectors();
 
-      const newInterval = parseInt(intervalInput.value, 10);
-      const newSeconds = parseInt(secondsInput.value, 10);
+      intervalCount = parseInt(intervalSelect.value, 10) || 1;
+      timeLeft = parseInt(secondsSelect.value, 10) || getCurrentModeDuration();
+
       const maxForMode = getCurrentModeDuration();
-
-      intervalCount = !isNaN(newInterval) && newInterval > 0 ? newInterval : 1;
-      timeLeft = !isNaN(newSeconds) && newSeconds > 0 ? newSeconds : maxForMode;
-
       if (timeLeft > maxForMode) {
         timeLeft = maxForMode;
       }
@@ -508,6 +540,8 @@
       setStatus("Timer en marcha");
       runSelect.disabled = true;
       restSelect.disabled = true;
+      intervalSelect.disabled = true;
+      secondsSelect.disabled = true;
 
       timer = setInterval(async () => {
         if (audioCtx && audioCtx.state !== "running") {
@@ -541,6 +575,8 @@
 
       runSelect.disabled = false;
       restSelect.disabled = false;
+      intervalSelect.disabled = false;
+      secondsSelect.disabled = false;
     }
 
     async function resetTimer() {
@@ -556,6 +592,8 @@
 
       runSelect.disabled = false;
       restSelect.disabled = false;
+      intervalSelect.disabled = false;
+      secondsSelect.disabled = false;
 
       updateDisplay();
       setStatus("Reiniciado");
@@ -606,6 +644,7 @@
     pauseBtn.addEventListener("click", pauseTimer);
     resetBtn.addEventListener("click", resetTimer);
 
+    populateIntervalSelect();
     syncConfigFromSelectors();
     updateDisplay();
   </script>
